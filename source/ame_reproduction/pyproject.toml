@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools<82.0.0", "wheel", "toml"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ame_reproduction"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "psutil",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
