@@ -1,1 +1,1 @@
-from stage1_terrain_cfg import *
+from .stage1_terrain_cfg import *
