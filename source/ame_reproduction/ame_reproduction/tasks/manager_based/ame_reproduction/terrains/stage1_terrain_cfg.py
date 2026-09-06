@@ -18,7 +18,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
     num_rows=10,
-    num_cols=24,
+    num_cols=20,
     horizontal_scale=0.1,
     vertical_scale=0.005,
     slope_threshold=0.75,
@@ -32,7 +32,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             border_width=1.0,
             holes=False,
         ),
-        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+        "pits": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
             proportion=0.1,
             step_height_range=(0.05, 0.23),
             step_width=0.3,
@@ -40,14 +40,8 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             border_width=1.0,
             holes=False,
         ),
-        "pits": terrain_gen.MeshPitTerrainCfg(
-            proportion=0.2,
-            pit_depth_range=(0.05, 0.23),
-            platform_width=3.0,
-            double_pit=False,
-        ),
         "rough_ground": HfRoughTerrainCfg(
-            proportion=0.1,
+            proportion=0.2,
             noise_height_range=(0.02, 0.10), # ± 8 cm
             noise_step=0.02,
             border_width=0.25,
@@ -61,7 +55,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             border_width=0.5,
         ),
         "gaps": terrain_gen.MeshGapTerrainCfg(
-            proportion=0.1,
+            proportion=0.2,
             platform_width=2.0,
             gap_width_range=(0.10, 0.50),
         ),
@@ -71,7 +65,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             stone_height_max=0.05,
             stone_distance_range=(0.10,0.30),
             stone_width_range=(0.25, 0.60),
-            border_width=0.25,
+            border_width=0.5,
         ),
     },
 )
