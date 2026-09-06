@@ -17,7 +17,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.ame_reproduction_env_cfg:AmeReproductionEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.configs.quadruped.ame_reproduction_env_cfg:AmeReproductionEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:PPORunnerCfg",
     },
 )
