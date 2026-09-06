@@ -48,7 +48,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
         ),
         "rough_ground": HfRoughTerrainCfg(
             proportion=0.1,
-            noise_height_range=(-0.08, 0.08), # ± 8 cm
+            noise_height_range=(0.02, 0.10), # ± 8 cm
             noise_step=0.02,
             border_width=0.25,
         ),
