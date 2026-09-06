@@ -8,6 +8,6 @@ __all__ = [
 ]
 
 # Forward stable MDP terms lazily, then override with environment-specific terms below.
-from isaaclab.envs.mdp import *  # noqa: F401, F403
+from isaaclab_tasks.manager_based.locomotion.velocity.mdp import *  # noqa: F401, F403
 
 from .rewards import joint_pos_target_l2
