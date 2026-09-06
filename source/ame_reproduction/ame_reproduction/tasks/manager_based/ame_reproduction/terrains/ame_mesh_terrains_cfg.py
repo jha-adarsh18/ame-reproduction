@@ -3,7 +3,7 @@
 from dataclasses import MISSING
 
 from isaaclab.terrains.sub_terrain_cfg import SubTerrainBaseCfg
-from isaaclab.utils import configclass
+from isaaclab.utils.configclass import configclass
 
 from . import ame_mesh_terrains
 
