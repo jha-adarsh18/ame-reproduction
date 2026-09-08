@@ -20,6 +20,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import quat_apply_inverse, yaw_quat
 
 if TYPE_CHECKING:
+    from isaaclab.assets import Articulation
     from isaaclab.envs import ManagerBasedRLEnv
     from isaaclab.sensors import ContactSensor
 
@@ -121,3 +122,28 @@ def stand_still_joint_deviation_l1(
     command = env.command_manager.get_command(command_name)
     # Penalize motion when command is nearly zero.
     return mdp.joint_deviation_l1(env, asset_cfg) * (torch.linalg.norm(command[:, :2], dim=1) < command_threshold)
+
+def joint_torque_limits(
+    env: ManagerBasedRLEnv,
+    soft_ratio: float,
+    actuator_name: str = "legs",
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize joint torques that cross a fraction of the actuator's effort limit.
+
+    Computes ``sum_j max(|tau_j| - soft_ratio * tau_lim,j, 0)``, the torque-limit term of
+    "Attention-Based Map Encoding for Learning Generalized Legged Locomotion" (arXiv:2506.09588,
+    Table 2), which uses ``soft_ratio = 0.8`` and weight 0.2 for ANYmal-D.
+
+    This differs from :func:`isaaclab.envs.mdp.applied_torque_limits`, which measures how much
+    torque the actuator model clipped away and so only fires at 100% of the limit. Note that
+    ``asset.data.joint_effort_limits`` is unusable here: for an explicit actuator it holds the
+    (very large) simulation effort limit, not the actuator's own ``effort_limit``.
+    """
+    asset: Articulation = env.scene[asset_cfg.name]
+    effort_limit = asset.actuators[actuator_name].effort_limit
+    out_of_limits = (
+        torch.abs(asset.data.applied_torque.torch[:, asset_cfg.joint_ids])
+        - soft_ratio * effort_limit[:, asset_cfg.joint_ids]
+    )
+    return torch.sum(out_of_limits.clip(min=0.0), dim=1)
