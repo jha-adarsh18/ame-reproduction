@@ -23,6 +23,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
     vertical_scale=0.005,
     slope_threshold=0.75,
     use_cache=False,
+    seed=42,
     sub_terrains={
         "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
             proportion=0.1,
@@ -42,7 +43,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
         ),
         "rough_ground": HfRoughTerrainCfg(
             proportion=0.2,
-            noise_height_range=(0.02, 0.10), # ± 8 cm
+            noise_height_range=(0.02, 0.08), # ± 8 cm at difficulty = 1.0
             noise_step=0.02,
             border_width=0.25,
         ),
@@ -64,7 +65,7 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             platform_width=2.0,
             stone_height_max=0.05,
             stone_distance_range=(0.10,0.30),
-            stone_width_range=(0.25, 0.60),
+            stone_width_range=(0.30, 0.60),
             border_width=0.5,
         ),
     },
