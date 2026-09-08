@@ -1,1 +1,1 @@
-from anymal import *
+from .anymal import *
