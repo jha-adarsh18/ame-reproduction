@@ -14,3 +14,6 @@ from isaaclab_tasks.manager_based.locomotion.velocity.mdp import *  # noqa: F401
 from .observations import height_scan_xyz
 from .rewards import joint_torque_limits
 # from .rewards import joint_pos_target_l2
+
+from isaaclab.envs.mdp import *  # noqa: F401, F403
+from isaaclab_tasks.manager_based.locomotion.velocity.mdp import *  # noqa: F401, F403
