@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-import scipy.interpolate as interpolate
 
 from isaaclab.terrains.height_field.utils import height_field_to_mesh
 
@@ -67,6 +66,9 @@ def rough_terrain(difficulty: float, cfg: ame_hf_terrains_cfg.HfRoughTerrainCfg)
     # create interpolation function for the sampled heights
     x = np.linspace(0, cfg.size[0] * cfg.horizontal_scale, width_downsampled)
     y = np.linspace(0, cfg.size[1] * cfg.horizontal_scale, length_downsampled)
+
+    # note: imported lazily so that the module can be imported before the simulation app starts
+    import scipy.interpolate as interpolate
     func = interpolate.RectBivariateSpline(x, y, height_field_downsampled)
 
     # interpolate the sampled heights to obtain the height field
