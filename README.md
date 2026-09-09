@@ -1,9 +1,5 @@
 # AME Stage-1 Reproduction (Isaac Lab)
 
-A reproduction of **stage 1** of *"Attention-based map encoding for learning generalized legged
-locomotion"* (He, Zhang, Jenelten, Grandia, Bächer, Hutter — *Science Robotics* 10(105), eadv3604,
-2025; [arXiv:2506.09588](https://arxiv.org/abs/2506.09588)), on ANYmal-D in Isaac Lab 3.0.
-
 **This repository was built to learn the Isaac Lab workflow.** The environment, the reward set, the
 attention encoder and the PPO wiring are all implemented and the pipeline trains end to end, but the
 policy has **not** been trained to convergence and nothing here has been deployed on hardware. Treat
