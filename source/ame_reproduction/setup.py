@@ -16,10 +16,7 @@ EXTENSION_PATH = os.path.dirname(os.path.realpath(__file__))
 EXTENSION_TOML_DATA = toml.load(os.path.join(EXTENSION_PATH, "config", "extension.toml"))
 
 # Minimum dependencies required prior to installation
-INSTALL_REQUIRES = [
-    # NOTE: Add dependencies
-    "psutil",
-]
+INSTALL_REQUIRES = ["psutil", "rsl-rl-lib==5.5.0"]
 
 # Installation operation
 setup(
