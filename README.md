@@ -39,7 +39,6 @@ as the paper describes; the proprioception embedding and the MLP heads are separ
 | `.../tasks/manager_based/ame_reproduction/terrains/` | The six stage-1 terrains and their generators |
 | `.../tasks/manager_based/ame_reproduction/mdp/` | `height_scan_xyz` observation, `joint_torque_limits` reward |
 | `.../tasks/manager_based/ame_reproduction/agents/` | `PPORunnerCfg` |
-| `AMEModel` subclasses its `MLPModel`. |
 
 The model is bound by string, not import — `class_name = "ame_reproduction.networks.ame_model:AMEModel"`
 is resolved by `rsl_rl.utils.resolve_callable` at runner construction.
@@ -94,7 +93,6 @@ Known deviations from the paper:
 
 ```bash
 python -m pip install -e source/ame_reproduction
-python -m pip install -e rsl_rl          # after Isaac Lab: same distribution name, later install wins
 
 python scripts/zero_agent.py --task Template-Ame-Reproduction-v0 --num_envs 32 --headless
 python scripts/rsl_rl/train.py --task Template-Ame-Reproduction-v0 --headless
