@@ -1,135 +1,146 @@
-# Template for Isaac Lab Projects
+# AME Stage-1 Reproduction (Isaac Lab)
 
-## Overview
+A reproduction of **stage 1** of *"Attention-based map encoding for learning generalized legged
+locomotion"* (He, Zhang, Jenelten, Grandia, Bächer, Hutter — *Science Robotics* 10(105), eadv3604,
+2025; [arXiv:2506.09588](https://arxiv.org/abs/2506.09588)), on ANYmal-D in Isaac Lab 3.0.
 
-This project/repository serves as a template for building projects or extensions based on Isaac Lab.
-It allows you to develop in an isolated environment, outside of the core Isaac Lab repository.
+**This repository was built to learn the Isaac Lab workflow.** The environment, the reward set, the
+attention encoder and the PPO wiring are all implemented and the pipeline trains end to end, but the
+policy has **not** been trained to convergence and nothing here has been deployed on hardware. Treat
+it as a working reference implementation, not as a result.
 
-**Key Features:**
+## What "stage 1" means
 
-- `Isolation` Work outside the core Isaac Lab repository, ensuring that your development efforts remain self-contained.
-- `Flexibility` This template is set up to allow your code to be run as an extension in Omniverse.
+The paper trains in two stages. Stage 1 learns on six base terrains with *perfect perception* and
+privileged observations for both actor and critic. Stage 2 fine-tunes on six harder terrains with
+observation noise and per-terrain map drift. **Only stage 1 is implemented here.**
 
-**Keywords:** extension, template, isaaclab
+## Architecture
 
-## Installation
+The policy is the paper's attention-based map encoder (Figure 8B):
 
-- Install Isaac Lab by following the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
-  We recommend using the conda or uv installation as it simplifies calling Python scripts from the terminal.
+```
+map scan (26 x 16 x 3)  ──► z only ──► CNN (k=5, pad=2, 1→16→61 ch, shape-preserving)
+                          │                                  │
+                          └────────── xyz coords ────────────┴──► tokens (416 x 64)
+                                                                        │  K, V
+proprioception (48) ──► Linear(48, 64) ─────────────────────────────────┴──► MHA (d=64, h=16, n=1)
+                     │                                                            │
+                     └──────────────────────────────────────────────► concat ◄────┘
+                                                                        │
+                                                              MLP [512, 256, 128] ──► 12 joint targets
+```
 
-- Clone or copy this project/repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
+The CNN and the attention module are **shared between actor and critic** (`share_cnn_encoders=True`),
+as the paper describes; the proprioception embedding and the MLP heads are separate.
 
-- Using a python interpreter that has Isaac Lab installed, install the library in editable mode using:
+## Layout
 
-    ```bash
-    # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-    python -m pip install -e source/ame_reproduction
+| Path | Contents |
+|---|---|
+| `source/ame_reproduction/ame_reproduction/networks/` | `AMEModel` (the encoder) and its `RslRlAMEModelCfg` |
+| `.../tasks/manager_based/ame_reproduction/configs/quadruped/` | `AmeReproductionEnvCfg` — scene, rewards, terminations, events, curriculum |
+| `.../tasks/manager_based/ame_reproduction/terrains/` | The six stage-1 terrains and their generators |
+| `.../tasks/manager_based/ame_reproduction/mdp/` | `height_scan_xyz` observation, `joint_torque_limits` reward |
+| `.../tasks/manager_based/ame_reproduction/agents/` | `PPORunnerCfg` |
+| `AMEModel` subclasses its `MLPModel`. |
 
-- Verify that the extension is correctly installed by:
+The model is bound by string, not import — `class_name = "ame_reproduction.networks.ame_model:AMEModel"`
+is resolved by `rsl_rl.utils.resolve_callable` at runner construction.
 
-    - Listing the available tasks:
+## What matches the paper
 
-        Note: It the task name changes, it may be necessary to update the search pattern `"Template-"`
-        (in the `scripts/list_envs.py` file) so that it can be listed.
+**Rewards** — all 14 stage-1 ANYmal-D terms at the Table 2 weights: linear (5.0) and angular (3.0)
+velocity tracking, termination (200), shank collision (1), action rate (5e-3), joint acceleration
+(2.5e-7), joint torques (2e-5), joint position limits (1.0), joint velocity limits (1.0), joint
+torque limits (0.2), vertical linear velocity (1.0), roll/pitch angular velocity (5e-2), foot contact
+forces above 700 N (2.5e-5), foot slippage (0.5).
 
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/list_envs.py
-        ```
+Two of those terms had no stock Isaac Lab equivalent and are implemented here. `joint_torque_limits`
+(`mdp/rewards.py`) is the paper's soft limit at 80% of the actuator effort limit — Isaac Lab's
+`applied_torque_limits` measures how much torque the actuator model clipped away instead, which only
+fires at 100%. `height_scan_xyz` (`mdp/observations.py`) returns each scan point's full 3-D
+coordinate rather than its height alone.
 
-    - Running a task:
+**Terminations** — torso contact with the terrain, or bad torso orientation. The paper's two, exactly.
 
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/<RL_LIBRARY>/train.py --task=<TASK_NAME>
-        ```
+**Terrain** — the six stage-1 types (stairs, pits, ±8 cm rough ground, pallets, gaps, grid stones),
+10 difficulty levels, with the terrain-level curriculum from Rudin et al.
 
-    - Running a task with dummy agents:
+**Observation** — 26 × 16 map scan at 10 cm resolution in the base-yaw frame, each cell carrying its
+3-D coordinate as positional encoding (paper: *"heightmap cell coordinates in the base-yaw frame as
+positional embedding"*). Policy observation is 1296 = 48 proprioception + 1248 map.
 
-        These include dummy agents that output zero or random agents. They are useful to ensure that the environments are configured correctly.
+**PPO** — 4096 environments, 24 steps per environment, 5 learning epochs, clip 0.2, entropy 0.005,
+γ 0.99, λ 0.95, target KL 0.01, adaptive learning rate, 18000 iterations.
 
-        - Zero-action agent
+## Deviations and assumptions
 
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/zero_agent.py --task=<TASK_NAME>
-            ```
-        - Random-action agent
+Things the paper does not specify, chosen here:
 
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/random_agent.py --task=<TASK_NAME>
-            ```
+- MLP head `[512, 256, 128]`, ELU throughout, no normalization layers in the CNN.
+- Height-scan clamp of ±1.0 m. Rays that hit nothing (gaps) return `+inf` from the sensor, which
+  becomes `-inf` after the height subtraction — the same end of the scale as a tall obstacle. They
+  are mapped to the **deep** bound instead, so a gap reads as "no support" rather than "wall".
+- Velocity command ranges ±1.0, 20 s episodes, 50 Hz control over 200 Hz physics.
+- Domain-randomization magnitudes (the paper names torso mass, per-foot friction and pushes, but
+  gives no values).
 
-### Set up IDE (Optional)
+Known deviations from the paper:
 
-To setup the IDE, please follow these instructions:
+- **Actuators.** Isaac Lab has no public ANYmal-D actuator network, so ANYmal-C's LSTM net is used.
+- **Joint position limits.** Isaac Lab shrinks the soft limit band about the midpoint of the hard
+  limits, while the paper scales the bound from zero. For ANYmal-D's asymmetric HAA joints
+  (−45°…+35° left, mirrored right) that differs by 0.5°. Negligible, but not identical.
+- **Joint velocity limit** is measured against the actuator's 7.5 rad/s rather than the URDF's 8.5.
 
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu.
-  When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
-
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory.
-The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse.
-This helps in indexing all the python modules for intelligent suggestions while writing code.
-
-### Setup as Omniverse Extension (Optional)
-
-We provide an example UI extension that will load upon enabling your extension defined in `source/ame_reproduction/ame_reproduction/ui_extension_example.py`.
-
-To enable your extension, follow these steps:
-
-1. **Add the search path of this project/repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon**, then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to the `source` directory of this project/repository.
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon**, then click `Refresh`.
-
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
-
-## Code formatting
-
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
+## Running it
 
 ```bash
-pip install pre-commit
+python -m pip install -e source/ame_reproduction
+python -m pip install -e rsl_rl          # after Isaac Lab: same distribution name, later install wins
+
+python scripts/zero_agent.py --task Template-Ame-Reproduction-v0 --num_envs 32 --headless
+python scripts/rsl_rl/train.py --task Template-Ame-Reproduction-v0 --headless
 ```
 
-Then you can run pre-commit with:
+Sanity checks worth doing on a fresh machine, in order: the observation space must be 1296; the
+model's proprioception embedding must print `Linear(in_features=48, out_features=64)` (if it says
+1296, `map_scan_dim` disagrees with the height scanner); `.*SHANK` and `.*FOOT` must each resolve to
+four bodies.
 
-```bash
-pre-commit run --all-files
+## Observed behaviour
+
+Verified to train, then stopped deliberately — there was no hardware target and no reason to pay for
+convergence. From iteration 3 on an RTX 8000 (48 GB), 4096 environments:
+
+```
+Steps per second: 890          Collection time: 14.79s
+Iteration time:   110.40s      Learning time:   95.60s
+Mean reward:      -2.17        Mean episode length: 89.44
 ```
 
-## Troubleshooting
+Every reward term is active and signed as expected, and the three terminations all fire. Terrain
+level sits at 4.81, which is the mean of the random initial assignment (`max_init_terrain_level=9`),
+not learning — 3 iterations is far too early to read anything into it.
 
-### Pylance Missing Indexing of Extensions
+The one practical finding: **87% of iteration time is the PPO update, not simulation** (95.6 s versus
+14.8 s). On this hardware the attention encoder at a 32768-sample minibatch dominates everything else,
+so `num_mini_batches` and GPU choice matter far more than environment count. The paper reports 24 s
+per iteration for stage 1 on an A100-40GB; a Turing-generation card is not the tool for this job.
 
-In some VsCode versions, the indexing of part of the extensions is missing.
-In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
+## Not implemented
 
-```json
-{
-    "python.analysis.extraPaths": [
-        "<path-to-ext-repo>/source/ame_reproduction"
-    ]
-}
-```
+- **Stage 2** — the six fine-tuning terrains, observation corruption, per-terrain map drift, and the
+  two standing rewards.
+- **Symmetry augmentation.** Absent from the paper, but the author's tuning guide below places it in the AME-1
+  section and says it *"helps improve the motion style a lot"*, with the map mirrored by flipping the
+  z values only and keeping x and y. Deliberately left out of the baseline.
 
-### Pylance Crash
+## References
 
-If you encounter a crash in `pylance`, it is probable that too many files are indexed and you run out of memory.
-A possible solution is to exclude some of omniverse packages that are not used in your project.
-To do so, modify `.vscode/settings.json` and comment out packages under the key `"python.analysis.extraPaths"`
-Some examples of packages that can likely be excluded are:
-
-```json
-"<path-to-isaac-sim>/extscache/omni.anim.*"         // Animation packages
-"<path-to-isaac-sim>/extscache/omni.kit.*"          // Kit UI tools
-"<path-to-isaac-sim>/extscache/omni.graph.*"        // Graph UI tools
-"<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
-...
-```
+- He et al., [*Attention-based map encoding for learning generalized legged locomotion*](https://www.science.org/doi/10.1126/scirobotics.adv3604),
+  Science Robotics 10(105), eadv3604 (2025). [arXiv:2506.09588](https://arxiv.org/abs/2506.09588)
+- Chong Zhang, [*Attention-based Map Encoding: a Practical Tuning Guide*](https://github.com/zita-ch/techblogs/blob/main/2026-03-28-AME%20Tuning%20Guide.md)
+- [ANYbotics/anymal_d_simple_description](https://github.com/ANYbotics/anymal_d_simple_description) — joint limits
+- [SII-FUSC/AME_Locomotion](https://github.com/SII-FUSC/AME_Locomotion) — an independent reimplementation on Unitree G1
