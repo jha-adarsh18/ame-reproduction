@@ -4,10 +4,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 __all__ = [
-    "joint_pos_target_l2",
+    "height_scan_xyz",
+    "joint_torque_limits"
 ]
 
 # Forward stable MDP terms lazily, then override with environment-specific terms below.
-from isaaclab.envs.mdp import *  # noqa: F401, F403
+from isaaclab_tasks.manager_based.locomotion.velocity.mdp import *  # noqa: F401, F403
 
-from .rewards import joint_pos_target_l2
+from .observations import height_scan_xyz
+from .rewards import joint_torque_limits
+# from .rewards import joint_pos_target_l2
+
+from isaaclab.envs.mdp import *  # noqa: F401, F403
+from isaaclab_tasks.manager_based.locomotion.velocity.mdp import *  # noqa: F401, F403
